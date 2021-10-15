@@ -7,7 +7,7 @@ use iced_x86::Formatter;
 use iced_x86::{code_asm::*, Decoder, DecoderOptions, Instruction, NasmFormatter};
 use memmap::Mmap;
 
-use crate::flow_graph::{BasicBlock, FlowInstruction};
+use crate::flow_graph::{FlowInstruction, SystemFunction};
 use crate::{
     environment::{Environment, TypeInfo},
     flow_graph::BasicBlockId,
@@ -132,15 +132,25 @@ pub fn codegen_trampoline(
     let mut asm = CodeAssembler::new(64)?;
     let mut callsite = asm.create_label();
 
+    asm.push(rcx)?;
+    asm.push(rdx)?;
+    asm.push(r8)?;
+    asm.push(r9)?;
     asm.mov(rax, basic_block_trampoline as u64)?;
     asm.mov(rcx, environment_ptr as u64)?;
     asm.mov(rdx, basic_block_id.0 as u64)?;
     asm.lea(r8, ptr(callsite))?;
+
     asm.sub(rsp, 0x28)?;
-    
     asm.set_label(&mut callsite)?;
     asm.call(rax)?;
     asm.add(rsp, 0x28)?;
+
+    asm.pop(r9)?;
+    asm.pop(r8)?;
+    asm.pop(rdx)?;
+    asm.pop(rcx)?;
+    asm.jmp(rax)?;
     asm.ret()?;
 
     let mut mmap = memmap::MmapMut::map_anon(4096)?;
@@ -157,8 +167,13 @@ pub fn codegen_trampoline(
     Ok((mmap, entry_fn))
 }
 
-pub fn codegen_basic_block(environment: &mut Environment, basic_block_id: &BasicBlockId) -> Result<Mmap> {
-    let basic_block = environment.flow_graph.get_basic_block(&basic_block_id)
+pub fn codegen_basic_block(
+    environment: &mut Environment,
+    basic_block_id: &BasicBlockId,
+) -> Result<Mmap> {
+    let basic_block = environment
+        .flow_graph
+        .get_basic_block(&basic_block_id)
         .expect("invalid basic block id");
 
     let mut asm = CodeAssembler::new(64)?;
@@ -179,7 +194,7 @@ pub fn codegen_basic_block(environment: &mut Environment, basic_block_id: &Basic
                 // TODO what type?!?
                 let register = context.push(CodegenStackEntry::Number);
                 asm.mov(register, context.argument_register(index))?;
-            },
+            }
             FlowInstruction::ApplyBinaryOperator(operator) => {
                 let (right_entry, right) = context.pop();
                 let (left_entry, left) = context.pop();
@@ -196,9 +211,9 @@ pub fn codegen_basic_block(environment: &mut Environment, basic_block_id: &Basic
 
                 match operator {
                     BinaryOperator::Plus => asm.add(left, right)?,
-                    op => todo!("codegen for binary operator {:?}", op)
+                    op => todo!("codegen for binary operator {:?}", op),
                 };
-            },
+            }
 
             FlowInstruction::CallFunction {
                 basic_block_id,
@@ -206,17 +221,45 @@ pub fn codegen_basic_block(environment: &mut Environment, basic_block_id: &Basic
             } => {
                 for argument_index in 0..argument_count {
                     let (stack_entry, stack_register) = context.pop();
+                    
+                    if stack_entry != CodegenStackEntry::Number { 
+                        todo!("non-number argument");
+                    }
 
                     let argument_register = context.argument_register(argument_index);
                     asm.mov(argument_register, stack_register)?;
                 }
-                
+
                 let type_info = TypeInfo;
                 let block_fn = environment.basic_block_fn(basic_block_id, type_info);
-            
+
                 asm.sub(rsp, 0x28)?;
                 asm.call(block_fn as u64)?;
                 asm.add(rsp, 0x28)?;
+
+                let return_value = context.push(CodegenStackEntry::Number);
+                asm.mov(return_value, rax)?;
+            }
+
+            FlowInstruction::CallSystemFunction(function) => {
+                let (entry, argument) = context.pop();
+
+                let callee = match (function, entry) {
+                    (SystemFunction::ConsoleLog, CodegenStackEntry::Number) => {
+                        console_log_integer_fn
+                    }
+                    (function, entry) => {
+                        todo!("call system function {:?} with arg {:?}", function, entry)
+                    }
+                };
+
+                asm.mov(context.argument_register(0), argument)?;
+                asm.sub(rsp, 0x28)?;
+                asm.call(callee as *const u8 as u64)?;
+                asm.add(rsp, 0x28)?;
+
+                let return_value = context.push(CodegenStackEntry::Number);
+                asm.mov(return_value, rax)?;
             }
 
             FlowInstruction::ReturnValue => {
@@ -224,6 +267,17 @@ pub fn codegen_basic_block(environment: &mut Environment, basic_block_id: &Basic
 
                 asm.mov(rax, return_value)?;
                 asm.ret()?;
+            }
+
+            FlowInstruction::Return => {
+                asm.ret()?;
+            },
+
+
+            FlowInstruction::GoToBlock(_basic_block_id) => todo!("GoToBlock instruction"),
+
+            FlowInstruction::DiscardValue => {
+                context.pop();
             },
         }
     }
@@ -240,13 +294,24 @@ pub fn codegen_basic_block(environment: &mut Environment, basic_block_id: &Basic
     Ok(mmap)
 }
 
-extern "win64" fn basic_block_trampoline(environment: *mut Environment, basic_block_id: usize, call_site: u64) {
+extern "win64" fn basic_block_trampoline(
+    environment: *mut Environment,
+    basic_block_id: usize,
+    call_site: u64,
+) -> u64 {
     let environment = unsafe { &mut *environment as &mut Environment };
     let basic_block_id = BasicBlockId(basic_block_id);
-    println!("TRAMPOLINE for basic block ID {:?} for call site {:#X}", basic_block_id, call_site);
+    println!(
+        "TRAMPOLINE for basic block ID {:?} for call site {:#X}",
+        basic_block_id, call_site
+    );
     let type_info = TypeInfo;
 
     // TODO patch up the call site instead of calling the fn here
     let basic_block_fn = environment.compile_basic_block(&basic_block_id, &type_info);
-    basic_block_fn();
+    return basic_block_fn as u64;
+}
+
+extern "win64" fn console_log_integer_fn(value: u64) {
+    println!("{:?}", value);
 }

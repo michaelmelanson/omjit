@@ -1,6 +1,6 @@
 use almond::ast::BinaryOperator;
 
-use super::basic_block::BasicBlockId;
+use super::{basic_block::BasicBlockId, value::SystemFunction};
 
 #[derive(Clone, Debug)]
 pub enum FlowInstruction {
@@ -14,5 +14,9 @@ pub enum FlowInstruction {
         basic_block_id: BasicBlockId,
         argument_count: usize,
     },
+    CallSystemFunction(SystemFunction),
     ReturnValue,
+    Return,
+    GoToBlock(BasicBlockId),
+    DiscardValue,
 }

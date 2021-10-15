@@ -9,9 +9,12 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use almond::ast::{Node, NodeKind};
 
 use crate::{
-    flow_graph::nodes::{
-        expression_statement::handle_expression_statement, function_decl::handle_function_decl,
-        return_statement::handle_return_statement,
+    flow_graph::{
+        nodes::{
+            expression_statement::handle_expression_statement, function_decl::handle_function_decl,
+            return_statement::handle_return_statement,
+        },
+        scope::Id,
     },
     source_location::SourceLocation,
 };
@@ -20,6 +23,7 @@ pub use self::{
     basic_block::{BasicBlock, BasicBlockId},
     flow_instruction::FlowInstruction,
     scope::Scope,
+    value::SystemFunction,
 };
 
 #[derive(Default, Debug)]
@@ -34,8 +38,19 @@ impl<'a> FlowGraph<'a> {
         match &node.kind {
             NodeKind::Program { body } => {
                 let mut graph = FlowGraph::default();
-                let scope = Rc::new(RefCell::new(Scope::default()));
+
+                let mut scope = Scope::default();
+                scope.insert(
+                    Id("__console_log".to_string()),
+                    value::Value::SystemFunction(SystemFunction::ConsoleLog),
+                );
+
+                let scope = Rc::new(RefCell::new(scope));
                 let root_block_id = graph.create_basic_block(node, scope, body);
+
+                let root_block = graph.get_basic_block_mut(&root_block_id).unwrap();
+                root_block.instructions.push(FlowInstruction::Return);
+                
                 graph.root_block_id = Some(root_block_id);
                 graph
             }
@@ -61,8 +76,9 @@ impl<'a> FlowGraph<'a> {
             }
             NodeKind::ExpressionStatement {
                 expression,
-                directive,
-            } => handle_expression_statement(self, block, expression, directive),
+                directive: _,
+            } => handle_expression_statement(block, expression),
+
             NodeKind::ReturnStatement { argument } => handle_return_statement(block, argument),
 
             kind => todo!("compile node {:?}", kind),
@@ -93,10 +109,11 @@ impl<'a> FlowGraph<'a> {
         id
     }
 
-    pub fn get_basic_block(
-        &self,
-        basic_block_id: &BasicBlockId,
-    ) -> Option<&BasicBlock<'a>> {
+    pub fn get_basic_block(&self, basic_block_id: &BasicBlockId) -> Option<&BasicBlock<'a>> {
         self.basic_blocks.get(basic_block_id)
+    }
+
+    fn get_basic_block_mut(&mut self, basic_block_id: &BasicBlockId) -> Option<&mut BasicBlock<'a>> {
+        self.basic_blocks.get_mut(basic_block_id)
     }
 }

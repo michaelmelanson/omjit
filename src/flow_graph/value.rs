@@ -9,4 +9,18 @@ pub enum Value {
     },
 
     FunctionParameter(usize),
+    SystemFunction(SystemFunction),
+}
+
+#[derive(Debug, Clone)]
+pub enum SystemFunction {
+    ConsoleLog,
+}
+
+impl SystemFunction {
+    pub fn arity(&self) -> usize {
+        match self {
+            SystemFunction::ConsoleLog => 1,
+        }
+    }
 }

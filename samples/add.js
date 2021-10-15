@@ -2,4 +2,4 @@ function add(a, b) {
     return a + b;
 }
 
-add(3, 2);
+__console_log(add(3, 2));
