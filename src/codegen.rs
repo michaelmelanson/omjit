@@ -127,6 +127,7 @@ pub fn print_disassembled_code(bytes: &[u8], rip: u64) -> String {
 pub fn codegen_trampoline(
     environment: &mut Environment,
     basic_block_id: &BasicBlockId,
+    dump_disassembly: bool
 ) -> Result<(Mmap, UnaryFunction)> {
     let environment_ptr = environment as *mut Environment;
     let mut asm = CodeAssembler::new(64)?;
@@ -159,8 +160,10 @@ pub fn codegen_trampoline(
     (&mut mmap[..]).write(&instructions)?;
     let mmap = mmap.make_exec()?;
 
-    println!("Trampoline function for {:?}:", basic_block_id);
-    print_disassembled_code(&mmap[0..instructions.len()], rip);
+    if dump_disassembly {
+        println!("Trampoline function for {:?}:", basic_block_id);
+        print_disassembled_code(&mmap[0..instructions.len()], rip);
+    }
 
     let entry_fn: UnaryFunction = unsafe { std::mem::transmute(mmap.as_ptr()) };
 
@@ -170,6 +173,7 @@ pub fn codegen_trampoline(
 pub fn codegen_basic_block(
     environment: &mut Environment,
     basic_block_id: &BasicBlockId,
+    dump_disassembly: bool
 ) -> Result<Mmap> {
     let basic_block = environment
         .flow_graph
@@ -288,8 +292,10 @@ pub fn codegen_basic_block(
     (&mut mmap[..]).write(&instructions)?;
     let mmap = mmap.make_exec()?;
 
-    println!("Code for block {:?}:", basic_block_id);
-    print_disassembled_code(&mmap[0..instructions.len()], rip);
+    if dump_disassembly {
+        println!("Code for block {:?}:", basic_block_id);
+        print_disassembled_code(&mmap[0..instructions.len()], rip);
+    }
 
     Ok(mmap)
 }
@@ -301,10 +307,6 @@ extern "win64" fn basic_block_trampoline(
 ) -> u64 {
     let environment = unsafe { &mut *environment as &mut Environment };
     let basic_block_id = BasicBlockId(basic_block_id);
-    println!(
-        "TRAMPOLINE for basic block ID {:?} for call site {:#X}",
-        basic_block_id, call_site
-    );
     let type_info = TypeInfo;
 
     // TODO patch up the call site instead of calling the fn here
