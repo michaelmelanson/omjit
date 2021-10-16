@@ -89,7 +89,7 @@ impl<'a> FlowGraph<'a> {
         &mut self,
         parent: &Node<'a>,
         scope: Rc<RefCell<Scope>>,
-        nodes: &Vec<Node<'a>>,
+        nodes: &[Node<'a>],
     ) -> BasicBlockId {
         let id = self.next_basic_block_id();
         let mut block = BasicBlock::new(

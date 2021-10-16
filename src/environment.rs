@@ -4,7 +4,7 @@ use anyhow::Result;
 use memmap::Mmap;
 
 use crate::{
-    codegen::{codegen_basic_block, codegen_trampoline, print_disassembled_code, UnaryFunction},
+    codegen::{codegen_basic_block, codegen_trampoline, UnaryFunction},
     flow_graph::{BasicBlockId, FlowGraph},
 };
 

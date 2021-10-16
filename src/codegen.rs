@@ -144,6 +144,7 @@ pub fn codegen_trampoline(
     asm.push(r9)?;
 
     // generate code for the callsite
+    #[allow(clippy::fn_to_numeric_cast)]
     asm.mov(rax, basic_block_trampoline as u64)?;
     asm.mov(rcx, environment_ptr as u64)?;
     asm.mov(rdx, basic_block_id.0 as u64)?;
@@ -178,7 +179,7 @@ fn assemble_code(mut asm: CodeAssembler) -> Result<(u64, Vec<u8>, Mmap)> {
     let mut mmap = memmap::MmapMut::map_anon(4096)?;
     let base_address = mmap.as_ptr() as u64;
     let instructions = asm.assemble(base_address)?;
-    (&mut mmap[..]).write(&instructions)?;
+    (&mut mmap[..]).write_all(&instructions)?;
     let mmap = mmap.make_exec()?;
     Ok((base_address, instructions, mmap))
 }
@@ -190,7 +191,7 @@ pub fn codegen_basic_block(
 ) -> Result<Mmap> {
     let basic_block = environment
         .flow_graph
-        .get_basic_block(&basic_block_id)
+        .get_basic_block(basic_block_id)
         .expect("invalid basic block id");
 
     let mut asm = CodeAssembler::new(64)?;
@@ -251,6 +252,7 @@ pub fn codegen_basic_block(
                 let block_fn = environment.basic_block_fn(basic_block_id, type_info);
 
                 asm.sub(rsp, 0x28)?;
+                #[allow(clippy::fn_to_numeric_cast)]
                 asm.call(block_fn as u64)?;
                 asm.add(rsp, 0x28)?;
 
@@ -301,7 +303,7 @@ pub fn codegen_basic_block(
     let mut mmap = memmap::MmapMut::map_anon(4096)?;
     let rip = mmap.as_ptr() as u64;
     let instructions = asm.assemble(rip)?;
-    (&mut mmap[..]).write(&instructions)?;
+    (&mut mmap[..]).write_all(&instructions)?;
     let mmap = mmap.make_exec()?;
 
     if dump_disassembly {
@@ -312,6 +314,7 @@ pub fn codegen_basic_block(
     Ok(mmap)
 }
 
+#[allow(clippy::fn_to_numeric_cast)]
 extern "win64" fn basic_block_trampoline(
     environment: *mut Environment,
     basic_block_id: usize,
@@ -323,7 +326,7 @@ extern "win64" fn basic_block_trampoline(
 
     // TODO patch up the call site instead of calling the fn here
     let basic_block_fn = environment.compile_basic_block(&basic_block_id, &type_info);
-    return basic_block_fn as u64;
+    basic_block_fn as u64
 }
 
 extern "win64" fn console_log_integer_fn(value: u64) {

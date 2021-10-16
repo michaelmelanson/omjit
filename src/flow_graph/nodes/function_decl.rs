@@ -38,7 +38,7 @@ pub fn handle_function_decl<'a>(
 
         let scope = Rc::new(RefCell::new(scope));
 
-        let body = flow_graph.create_basic_block(&function_node.body, scope, &body);
+        let body = flow_graph.create_basic_block(&function_node.body, scope, body);
 
         let value = Value::Function {
             id: id.clone(),
