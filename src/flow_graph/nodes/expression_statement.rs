@@ -1,8 +1,7 @@
 use almond::ast::Node;
 
 use crate::flow_graph::{
-    basic_block::BasicBlock,
-    flow_instruction::FlowInstruction,
+    basic_block::BasicBlock, flow_instruction::FlowInstruction,
     nodes::expression::evaluate_expression,
 };
 

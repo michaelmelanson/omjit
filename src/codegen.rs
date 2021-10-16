@@ -2,9 +2,10 @@ use std::io::Write;
 
 use almond::ast::BinaryOperator;
 use anyhow::Result;
-use iced_x86::code_asm::AsmRegister64;
-use iced_x86::Formatter;
-use iced_x86::{code_asm::*, Decoder, DecoderOptions, Instruction, NasmFormatter};
+use iced_x86::{
+    code_asm::{AsmRegister64, *},
+    Decoder, DecoderOptions, Formatter, Instruction, NasmFormatter,
+};
 use memmap::Mmap;
 
 use crate::flow_graph::{FlowInstruction, SystemFunction};
@@ -72,9 +73,9 @@ pub enum CodegenStackEntry {
     Null,
 }
 
-pub fn print_disassembled_code(bytes: &[u8], rip: u64) -> String {
+pub fn print_disassembled_code(bytes: &[u8], base_address: u64) -> String {
     const HEXBYTES_COLUMN_BYTE_LENGTH: usize = 10;
-    let mut decoder = Decoder::with_ip(64, bytes, rip, DecoderOptions::NONE);
+    let mut decoder = Decoder::with_ip(64, bytes, base_address, DecoderOptions::NONE);
 
     // Formatters: Masm*, Nasm*, Gas* (AT&T) and Intel* (XED).
     // For fastest code, see `SpecializedFormatter` which is ~3.3x faster. Use it if formatting
@@ -82,8 +83,11 @@ pub fn print_disassembled_code(bytes: &[u8], rip: u64) -> String {
     let mut formatter = NasmFormatter::new();
 
     // Change some options, there are many more
-    formatter.options_mut().set_digit_separator("`");
     formatter.options_mut().set_first_operand_char_index(10);
+    formatter.options_mut().set_rip_relative_addresses(true);
+    formatter
+        .options_mut()
+        .set_space_after_operand_separator(true);
 
     // String implements FormatterOutput
     let mut output = String::new();
@@ -108,7 +112,7 @@ pub fn print_disassembled_code(bytes: &[u8], rip: u64) -> String {
 
         // Eg. "00007FFAC46ACDB2 488DAC2400FFFFFF     lea       rbp,[rsp-100h]"
         print!("{:016X} ", instruction.ip());
-        let start_index = (instruction.ip() - rip) as usize;
+        let start_index = (instruction.ip() - base_address) as usize;
         let instr_bytes = &bytes[start_index..start_index + instruction.len()];
         for b in instr_bytes.iter() {
             print!("{:02X}", b);
@@ -127,42 +131,42 @@ pub fn print_disassembled_code(bytes: &[u8], rip: u64) -> String {
 pub fn codegen_trampoline(
     environment: &mut Environment,
     basic_block_id: &BasicBlockId,
-    dump_disassembly: bool
+    dump_disassembly: bool,
 ) -> Result<(Mmap, UnaryFunction)> {
     let environment_ptr = environment as *mut Environment;
     let mut asm = CodeAssembler::new(64)?;
     let mut callsite = asm.create_label();
 
+    // push the call state
     asm.push(rcx)?;
     asm.push(rdx)?;
     asm.push(r8)?;
     asm.push(r9)?;
+
+    // generate code for the callsite
     asm.mov(rax, basic_block_trampoline as u64)?;
     asm.mov(rcx, environment_ptr as u64)?;
     asm.mov(rdx, basic_block_id.0 as u64)?;
     asm.lea(r8, ptr(callsite))?;
-
     asm.sub(rsp, 0x28)?;
     asm.set_label(&mut callsite)?;
     asm.call(rax)?;
     asm.add(rsp, 0x28)?;
 
+    // restore the original call state
     asm.pop(r9)?;
     asm.pop(r8)?;
     asm.pop(rdx)?;
     asm.pop(rcx)?;
-    asm.jmp(rax)?;
-    asm.ret()?;
 
-    let mut mmap = memmap::MmapMut::map_anon(4096)?;
-    let rip = mmap.as_ptr() as u64;
-    let instructions = asm.assemble(rip)?;
-    (&mut mmap[..]).write(&instructions)?;
-    let mmap = mmap.make_exec()?;
+    // jump into the the generated code to continue execution
+    asm.jmp(rax)?;
+
+    let (base_address, instructions, mmap) = assemble_code(asm)?;
 
     if dump_disassembly {
         println!("Trampoline function for {:?}:", basic_block_id);
-        print_disassembled_code(&mmap[0..instructions.len()], rip);
+        print_disassembled_code(&mmap[0..instructions.len()], base_address);
     }
 
     let entry_fn: UnaryFunction = unsafe { std::mem::transmute(mmap.as_ptr()) };
@@ -170,10 +174,19 @@ pub fn codegen_trampoline(
     Ok((mmap, entry_fn))
 }
 
+fn assemble_code(mut asm: CodeAssembler) -> Result<(u64, Vec<u8>, Mmap)> {
+    let mut mmap = memmap::MmapMut::map_anon(4096)?;
+    let base_address = mmap.as_ptr() as u64;
+    let instructions = asm.assemble(base_address)?;
+    (&mut mmap[..]).write(&instructions)?;
+    let mmap = mmap.make_exec()?;
+    Ok((base_address, instructions, mmap))
+}
+
 pub fn codegen_basic_block(
     environment: &mut Environment,
     basic_block_id: &BasicBlockId,
-    dump_disassembly: bool
+    dump_disassembly: bool,
 ) -> Result<Mmap> {
     let basic_block = environment
         .flow_graph
@@ -225,8 +238,8 @@ pub fn codegen_basic_block(
             } => {
                 for argument_index in 0..argument_count {
                     let (stack_entry, stack_register) = context.pop();
-                    
-                    if stack_entry != CodegenStackEntry::Number { 
+
+                    if stack_entry != CodegenStackEntry::Number {
                         todo!("non-number argument");
                     }
 
@@ -275,14 +288,13 @@ pub fn codegen_basic_block(
 
             FlowInstruction::Return => {
                 asm.ret()?;
-            },
-
+            }
 
             FlowInstruction::GoToBlock(_basic_block_id) => todo!("GoToBlock instruction"),
 
             FlowInstruction::DiscardValue => {
                 context.pop();
-            },
+            }
         }
     }
 
@@ -303,7 +315,7 @@ pub fn codegen_basic_block(
 extern "win64" fn basic_block_trampoline(
     environment: *mut Environment,
     basic_block_id: usize,
-    call_site: u64,
+    _call_site: u64,
 ) -> u64 {
     let environment = unsafe { &mut *environment as &mut Environment };
     let basic_block_id = BasicBlockId(basic_block_id);

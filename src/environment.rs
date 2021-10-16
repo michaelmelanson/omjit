@@ -3,7 +3,10 @@ use std::{collections::HashMap, mem};
 use anyhow::Result;
 use memmap::Mmap;
 
-use crate::{codegen::{UnaryFunction, codegen_basic_block, codegen_trampoline, print_disassembled_code}, flow_graph::{BasicBlockId, FlowGraph}};
+use crate::{
+    codegen::{codegen_basic_block, codegen_trampoline, print_disassembled_code, UnaryFunction},
+    flow_graph::{BasicBlockId, FlowGraph},
+};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TypeInfo;
@@ -36,7 +39,8 @@ impl<'a> Environment<'a> {
             return *block_fn;
         }
 
-        let trampoline_result = codegen_trampoline(self, &basic_block_id, self.dump_disassembly).expect("codegen failed");
+        let trampoline_result = codegen_trampoline(self, &basic_block_id, self.dump_disassembly)
+            .expect("codegen failed");
         self.trampolines.insert(key.clone(), trampoline_result);
         self.trampolines.get(&key).unwrap().1
     }
@@ -56,7 +60,8 @@ impl<'a> Environment<'a> {
         basic_block_id: &BasicBlockId,
         type_info: &TypeInfo,
     ) -> UnaryFunction {
-        let mmap = codegen_basic_block(self, basic_block_id, self.dump_disassembly).expect("codegen");
+        let mmap =
+            codegen_basic_block(self, basic_block_id, self.dump_disassembly).expect("codegen");
         let entry_fn: extern "win64" fn() = unsafe { mem::transmute(mmap.as_ptr()) };
 
         self.block_versions

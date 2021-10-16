@@ -7,12 +7,13 @@ use structopt::StructOpt;
 
 use crate::{environment::Environment, flow_graph::FlowGraph};
 
-/// Search for a pattern in a file and display the lines that contain it.
 #[derive(StructOpt)]
 struct Cli {
+    /// Print generated code during execution
     #[structopt(short, long)]
     disassemble: bool,
 
+    /// Print the flow graph before executing program
     #[structopt(short, long)]
     show_flowgraph: bool,
 

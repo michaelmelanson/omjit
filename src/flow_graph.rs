@@ -50,7 +50,7 @@ impl<'a> FlowGraph<'a> {
 
                 let root_block = graph.get_basic_block_mut(&root_block_id).unwrap();
                 root_block.instructions.push(FlowInstruction::Return);
-                
+
                 graph.root_block_id = Some(root_block_id);
                 graph
             }
@@ -113,7 +113,10 @@ impl<'a> FlowGraph<'a> {
         self.basic_blocks.get(basic_block_id)
     }
 
-    fn get_basic_block_mut(&mut self, basic_block_id: &BasicBlockId) -> Option<&mut BasicBlock<'a>> {
+    fn get_basic_block_mut(
+        &mut self,
+        basic_block_id: &BasicBlockId,
+    ) -> Option<&mut BasicBlock<'a>> {
         self.basic_blocks.get_mut(basic_block_id)
     }
 }

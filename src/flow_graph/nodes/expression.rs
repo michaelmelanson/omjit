@@ -3,7 +3,9 @@ use almond::ast::{
     NodeKind::{self, BinaryExpression, Identifier},
 };
 
-use crate::flow_graph::{basic_block::BasicBlock, flow_instruction::FlowInstruction, scope::Id, value::Value};
+use crate::flow_graph::{
+    basic_block::BasicBlock, flow_instruction::FlowInstruction, scope::Id, value::Value,
+};
 
 pub fn evaluate_expression(parent_block: &mut BasicBlock, node: &Node) {
     match &node.kind {
