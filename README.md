@@ -7,7 +7,10 @@ This is a prototype of a JIT-compiled Javascript engine.
 You'll need a working Rust environment, including Cargo. Once you have that, you can run Javascript programs with:
 
 ```
-cargo run -- samples/add.js
+cargo run -- samples/add.js   
+    Finished dev [unoptimized + debuginfo] target(s) in 0.17s
+     Running `target/debug/omjit samples/add.js`
+5
 ```
 
 This simple sample program calculates 3 + 2, and will print the result of `5`.
