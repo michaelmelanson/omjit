@@ -27,11 +27,19 @@
             "type": "lldb",
             "request": "launch",
             "name": "Debug executable 'omjit'",
+            "env": {
+                "RUSTFLAGS": "-Zsanitizer=address"
+            },
             "cargo": {
+                "env": {
+                    "RUSTFLAGS": "-Zsanitizer=address"
+                },
                 "args": [
                     "build",
                     "--bin=omjit",
-                    "--package=omjit"
+                    "--package=omjit",
+                    "-Zbuild-std",
+                    "--target=x86_64-apple-darwin"
                 ],
                 "filter": {
                     "name": "omjit",
@@ -46,11 +54,15 @@
             "request": "launch",
             "name": "Debug unit tests in executable 'omjit'",
             "cargo": {
+                "env": {
+                    "RUSTFLAGS": "-Zsanitizer=address -Zbuild-std"
+                },
                 "args": [
                     "test",
                     "--no-run",
                     "--bin=omjit",
-                    "--package=omjit"
+                    "--package=omjit",
+                    "--target=x86_64-apple-darwin"
                 ],
                 "filter": {
                     "name": "omjit",

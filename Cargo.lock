@@ -241,6 +241,7 @@ dependencies = [
  "almond",
  "anyhow",
  "iced-x86",
+ "lazy_static",
  "memmap",
  "nom",
  "nom_locate",

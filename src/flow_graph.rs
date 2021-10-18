@@ -9,12 +9,9 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use almond::ast::{Node, NodeKind};
 
 use crate::{
-    flow_graph::{
-        nodes::{
-            expression_statement::handle_expression_statement, function_decl::handle_function_decl,
-            return_statement::handle_return_statement,
-        },
-        scope::Id,
+    flow_graph::nodes::{
+        expression_statement::handle_expression_statement, function_decl::handle_function_decl,
+        return_statement::handle_return_statement,
     },
     source_location::SourceLocation,
 };
@@ -22,8 +19,8 @@ use crate::{
 pub use self::{
     basic_block::{BasicBlock, BasicBlockId},
     flow_instruction::FlowInstruction,
-    scope::Scope,
-    value::SystemFunction,
+    scope::{Id, Scope},
+    value::{SystemFunction, SystemFunctionGeneratorFn, SystemFunctionHandlerFn, Value},
 };
 
 #[derive(Default, Debug)]
@@ -34,16 +31,10 @@ pub struct FlowGraph<'a> {
 }
 
 impl<'a> FlowGraph<'a> {
-    pub fn from_root_node(node: &'a Node) -> Self {
+    pub fn from_root_node(node: &'a Node, scope: Scope) -> Self {
         match &node.kind {
             NodeKind::Program { body } => {
                 let mut graph = FlowGraph::default();
-
-                let mut scope = Scope::default();
-                scope.insert(
-                    Id("__console_log".to_string()),
-                    value::Value::SystemFunction(SystemFunction::ConsoleLog),
-                );
 
                 let scope = Rc::new(RefCell::new(scope));
                 let root_block_id = graph.create_basic_block(node, scope, body);

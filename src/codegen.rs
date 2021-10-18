@@ -8,7 +8,7 @@ use iced_x86::{
 };
 use memmap::Mmap;
 
-use crate::flow_graph::{FlowInstruction, SystemFunction};
+use crate::flow_graph::FlowInstruction;
 use crate::{
     environment::{Environment, TypeInfo},
     flow_graph::BasicBlockId,
@@ -143,7 +143,7 @@ pub fn codegen_trampoline(
     asm.push(r8)?;
     asm.push(r9)?;
 
-    // generate code for the callsite
+    // generate code for the call to generate the actual code
     #[allow(clippy::fn_to_numeric_cast)]
     asm.mov(rax, basic_block_trampoline as u64)?;
     asm.mov(rcx, environment_ptr as u64)?;
@@ -261,18 +261,24 @@ pub fn codegen_basic_block(
             }
 
             FlowInstruction::CallSystemFunction(function) => {
-                let (entry, argument) = context.pop();
+                let mut argument_entries = Vec::new();
 
-                let callee = match (function, entry) {
-                    (SystemFunction::ConsoleLog, CodegenStackEntry::Number) => {
-                        console_log_integer_fn
-                    }
-                    (function, entry) => {
-                        todo!("call system function {:?} with arg {:?}", function, entry)
-                    }
-                };
+                for index in 0..function.arity() {
+                    let (entry, argument) = context.pop();
+                    argument_entries.push(entry);
 
-                asm.mov(context.argument_register(0), argument)?;
+                    asm.mov(context.argument_register(index), argument)?;
+                }
+
+                let callee = function.handler_fn(&argument_entries);
+                let callee = callee.unwrap_or_else(|| {
+                    todo!(
+                        "handler not implemented for system function {} with args {:?}",
+                        function.name(),
+                        argument_entries
+                    )
+                });
+
                 asm.sub(rsp, 0x28)?;
                 asm.call(callee as *const u8 as u64)?;
                 asm.add(rsp, 0x28)?;
@@ -327,8 +333,4 @@ extern "win64" fn basic_block_trampoline(
     // TODO patch up the call site instead of calling the fn here
     let basic_block_fn = environment.compile_basic_block(&basic_block_id, &type_info);
     basic_block_fn as u64
-}
-
-extern "win64" fn console_log_integer_fn(value: u64) {
-    println!("{:?}", value);
 }
