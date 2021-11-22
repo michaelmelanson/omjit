@@ -83,6 +83,9 @@ pub fn evaluate_expression(parent_block: &mut BasicBlock, node: &Node) {
                     Value::FunctionParameter(index) => {
                         FlowInstruction::PushFunctionParameter(index)
                     }
+                    Value::StackVariable { offset } => {
+                        FlowInstruction::PushStackVariable(offset)
+                    }
                     value => todo!("evaluate identifier value {:?}", value),
                 })
             } else {

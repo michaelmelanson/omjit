@@ -1,10 +1,7 @@
 #![feature(once_cell)]
-use std::{lazy::SyncLazy, sync::{Mutex, RwLock}};
-use lazy_static::lazy_static;
 
 use omjit::{
-    CodegenStackEntry, Environment, FlowGraph, Id, Scope, SystemFunction, SystemFunctionHandlerFn,
-    Value,
+    Environment, FlowGraph, Scope,
 };
 
 // static EMITTED: SyncLazy<Mutex<Vec<u64>>> = SyncLazy::new(|| Mutex::new(Vec::with_capacity(1)));

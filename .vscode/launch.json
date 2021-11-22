@@ -46,7 +46,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["samples/add.js"],
+            "args": ["-s", "-d", "samples/add.js"],
             "cwd": "${workspaceFolder}"
         },
         {

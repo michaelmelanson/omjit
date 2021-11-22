@@ -12,6 +12,7 @@ use crate::{
     flow_graph::nodes::{
         expression_statement::handle_expression_statement, function_decl::handle_function_decl,
         return_statement::handle_return_statement,
+        for_statement::handle_for_statement
     },
     source_location::SourceLocation,
 };
@@ -37,10 +38,7 @@ impl<'a> FlowGraph<'a> {
                 let mut graph = FlowGraph::default();
 
                 let scope = Rc::new(RefCell::new(scope));
-                let root_block_id = graph.create_basic_block(node, scope, body);
-
-                let root_block = graph.get_basic_block_mut(&root_block_id).unwrap();
-                root_block.instructions.push(FlowInstruction::Return);
+                let root_block_id = graph.create_basic_block(node, scope, body, true, None);
 
                 graph.root_block_id = Some(root_block_id);
                 graph
@@ -72,15 +70,19 @@ impl<'a> FlowGraph<'a> {
 
             NodeKind::ReturnStatement { argument } => handle_return_statement(block, argument),
 
+            NodeKind::ForStatement { body, init, test, update } => handle_for_statement(self, node, block, init, test, update, body),
+
             kind => todo!("compile node {:?}", kind),
         }
     }
 
-    fn create_basic_block(
+    pub fn create_basic_block(
         &mut self,
         parent: &Node<'a>,
         scope: Rc<RefCell<Scope>>,
         nodes: &[Node<'a>],
+        include_prologue_epilogue: bool,
+        next_basic_block_id: Option<BasicBlockId>
     ) -> BasicBlockId {
         let id = self.next_basic_block_id();
         let mut block = BasicBlock::new(
@@ -90,10 +92,19 @@ impl<'a> FlowGraph<'a> {
                 start: parent.start,
                 end: parent.end,
             },
+            next_basic_block_id
         );
+
+        if include_prologue_epilogue {
+            block.instructions.push(FlowInstruction::FunctionPrologue);
+        }
 
         for node in nodes {
             self.add_node_to_block(&mut block, node);
+        }
+
+        if include_prologue_epilogue {
+            block.instructions.push(FlowInstruction::FunctionEpilogue);
         }
 
         self.insert_block(block);
@@ -102,12 +113,5 @@ impl<'a> FlowGraph<'a> {
 
     pub fn get_basic_block(&self, basic_block_id: &BasicBlockId) -> Option<&BasicBlock<'a>> {
         self.basic_blocks.get(basic_block_id)
-    }
-
-    fn get_basic_block_mut(
-        &mut self,
-        basic_block_id: &BasicBlockId,
-    ) -> Option<&mut BasicBlock<'a>> {
-        self.basic_blocks.get_mut(basic_block_id)
     }
 }

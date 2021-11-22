@@ -1,6 +1,6 @@
 {
     "rust-analyzer.updates.channel": "nightly",
     "lldb.displayFormat": "auto",
-    "lldb.showDisassembly": "never",
+    "lldb.showDisassembly": "always",
     "lldb.dereferencePointers": true,
 }

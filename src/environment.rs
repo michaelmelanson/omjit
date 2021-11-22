@@ -3,10 +3,7 @@ use std::{collections::HashMap, mem};
 use anyhow::Result;
 use memmap::Mmap;
 
-use crate::{
-    codegen::{codegen_basic_block, codegen_trampoline, UnaryFunction},
-    flow_graph::{BasicBlockId, FlowGraph},
-};
+use crate::{codegen::{UnaryFunction, codegen_basic_block, codegen_trampoline, gdb_jit::GdbJitImageRegistration}, flow_graph::{BasicBlock, BasicBlockId, FlowGraph}};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TypeInfo;
@@ -14,7 +11,7 @@ pub struct TypeInfo;
 pub struct Environment<'a> {
     dump_disassembly: bool,
     block_versions: HashMap<(BasicBlockId, TypeInfo), (Mmap, UnaryFunction)>,
-    trampolines: HashMap<(BasicBlockId, TypeInfo), (Mmap, UnaryFunction)>,
+    trampolines: HashMap<(BasicBlockId, TypeInfo), (GdbJitImageRegistration, UnaryFunction)>,
     pub flow_graph: FlowGraph<'a>,
 }
 
@@ -26,6 +23,10 @@ impl<'a> Environment<'a> {
             trampolines: HashMap::new(),
             flow_graph,
         }
+    }
+
+    pub fn get_basic_block(&self, basic_block_id: &BasicBlockId) -> Option<&BasicBlock> {
+        self.flow_graph.get_basic_block(basic_block_id)
     }
 
     pub fn basic_block_fn(
