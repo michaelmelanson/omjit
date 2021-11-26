@@ -1,8 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{Id, Value, source_location::SourceLocation};
+use crate::{source_location::SourceLocation, Id, Value};
 
-use super::{flow_instruction::FlowInstruction, scope::Scope};
+use super::{flow_instruction::FlowInstruction, scope::Scope, tail_instruction::TailInstruction};
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct BasicBlockId(pub usize);
@@ -13,17 +13,22 @@ pub struct BasicBlock<'a> {
     pub scope: Rc<RefCell<Scope>>,
     pub instructions: Vec<FlowInstruction>,
     pub location: SourceLocation<'a>,
-    pub next_basic_block_id: Option<BasicBlockId>
+    pub tails: Vec<TailInstruction>,
 }
 
 impl<'a> BasicBlock<'a> {
-    pub fn new(id: BasicBlockId, scope: Rc<RefCell<Scope>>, span: SourceLocation<'a>, next_basic_block_id: Option<BasicBlockId>) -> Self {
+    pub fn new(
+        id: BasicBlockId,
+        scope: Rc<RefCell<Scope>>,
+        span: SourceLocation<'a>,
+        next_basic_block_id: Option<BasicBlockId>,
+    ) -> Self {
         Self {
             id,
             instructions: Vec::new(),
             scope,
             location: span,
-            next_basic_block_id
+            tails: Vec::new(),
         }
     }
 

@@ -3,7 +3,8 @@ use std::{fmt::Debug, rc::Rc};
 use crate::codegen::CodegenStackEntry;
 
 pub type SystemFunctionHandlerFn = *const extern "win64" fn();
-pub type SystemFunctionGeneratorFn = Box<dyn Fn(&[CodegenStackEntry]) -> Option<SystemFunctionHandlerFn>>;
+pub type SystemFunctionGeneratorFn =
+    Box<dyn Fn(&[CodegenStackEntry]) -> Option<SystemFunctionHandlerFn>>;
 
 #[derive(Clone)]
 pub struct SystemFunction {

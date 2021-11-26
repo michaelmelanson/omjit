@@ -1,5 +1,5 @@
 use almond::ast::{
-    LiteralValue, Node,
+    AssignmentOperator, BinaryOperator, LiteralValue, Node,
     NodeKind::{self, BinaryExpression, Identifier},
 };
 
@@ -83,9 +83,7 @@ pub fn evaluate_expression(parent_block: &mut BasicBlock, node: &Node) {
                     Value::FunctionParameter(index) => {
                         FlowInstruction::PushFunctionParameter(index)
                     }
-                    Value::StackVariable { offset } => {
-                        FlowInstruction::PushStackVariable(offset)
-                    }
+                    Value::StackVariable { offset } => FlowInstruction::PushStackVariable(offset),
                     value => todo!("evaluate identifier value {:?}", value),
                 })
             } else {
@@ -106,6 +104,26 @@ pub fn evaluate_expression(parent_block: &mut BasicBlock, node: &Node) {
             }
             LiteralValue::RegExp(_literal) => todo!("literal regexp"),
         },
+
+        NodeKind::AssignmentExpression {
+            left,
+            operator,
+            right,
+        } => {
+            evaluate_expression(parent_block, right);
+
+            match operator {
+                AssignmentOperator::PlusEquals => {
+                    evaluate_expression(parent_block, left);
+                    parent_block.push(FlowInstruction::ApplyBinaryOperator(BinaryOperator::Plus));
+                }
+
+                other => unimplemented!("assignment expression with operator {:?}", operator),
+            }
+
+            evaluate_expression(parent_block, left);
+            parent_block.push(FlowInstruction::Assign)
+        }
 
         kind => todo!("expression node {:?}", kind),
     }

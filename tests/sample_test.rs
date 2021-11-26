@@ -1,8 +1,6 @@
 #![feature(once_cell)]
 
-use omjit::{
-    Environment, FlowGraph, Scope,
-};
+use omjit::{Environment, FlowGraph, Scope};
 
 // static EMITTED: SyncLazy<Mutex<Vec<u64>>> = SyncLazy::new(|| Mutex::new(Vec::with_capacity(1)));
 

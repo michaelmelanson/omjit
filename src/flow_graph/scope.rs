@@ -10,7 +10,7 @@ pub struct Scope {
     parent: Option<Rc<RefCell<Scope>>>,
     bindings: HashMap<Id, Value>,
     stack_offset: usize,
-    pub stack_allocation: usize
+    pub stack_allocation: usize,
 }
 
 impl Scope {
@@ -26,7 +26,7 @@ impl Scope {
             parent,
             bindings: HashMap::new(),
             stack_offset,
-            stack_allocation: 0
+            stack_allocation: 0,
         }
     }
 

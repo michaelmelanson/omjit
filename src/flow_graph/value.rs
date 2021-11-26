@@ -10,8 +10,10 @@ pub use self::system_function::{
 
 #[derive(Debug, Clone)]
 pub enum Value {
-    StackVariable { offset: usize },
-    
+    StackVariable {
+        offset: usize,
+    },
+
     Function {
         id: Option<Id>,
         params: Vec<Id>,

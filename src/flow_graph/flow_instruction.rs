@@ -8,7 +8,7 @@ use super::{basic_block::BasicBlockId, value::SystemFunction};
 pub enum FlowInstruction {
     FunctionPrologue,
     FunctionEpilogue,
-    Assign(Id),
+    Assign,
     PushLiteralBoolean(bool),
     PushLiteralString(String),
     PushLiteralNumber(f64),

@@ -3,7 +3,12 @@ use std::{collections::HashMap, mem};
 use anyhow::Result;
 use memmap::Mmap;
 
-use crate::{codegen::{UnaryFunction, codegen_basic_block, codegen_trampoline, gdb_jit::GdbJitImageRegistration}, flow_graph::{BasicBlock, BasicBlockId, FlowGraph}};
+use crate::{
+    codegen::{
+        codegen_basic_block, codegen_trampoline, gdb_jit::GdbJitImageRegistration, UnaryFunction,
+    },
+    flow_graph::{BasicBlock, BasicBlockId, FlowGraph},
+};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TypeInfo;

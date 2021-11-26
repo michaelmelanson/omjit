@@ -2,6 +2,7 @@ mod basic_block;
 mod flow_instruction;
 mod nodes;
 mod scope;
+mod tail_instruction;
 mod value;
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
@@ -10,9 +11,8 @@ use almond::ast::{Node, NodeKind};
 
 use crate::{
     flow_graph::nodes::{
-        expression_statement::handle_expression_statement, function_decl::handle_function_decl,
-        return_statement::handle_return_statement,
-        for_statement::handle_for_statement
+        expression_statement::handle_expression_statement, for_statement::handle_for_statement,
+        function_decl::handle_function_decl, return_statement::handle_return_statement,
     },
     source_location::SourceLocation,
 };
@@ -20,6 +20,7 @@ use crate::{
 pub use self::{
     basic_block::{BasicBlock, BasicBlockId},
     flow_instruction::FlowInstruction,
+    tail_instruction::TailInstruction,
     scope::{Id, Scope},
     value::{SystemFunction, SystemFunctionGeneratorFn, SystemFunctionHandlerFn, Value},
 };
@@ -70,7 +71,12 @@ impl<'a> FlowGraph<'a> {
 
             NodeKind::ReturnStatement { argument } => handle_return_statement(block, argument),
 
-            NodeKind::ForStatement { body, init, test, update } => handle_for_statement(self, node, block, init, test, update, body),
+            NodeKind::ForStatement {
+                body,
+                init,
+                test,
+                update,
+            } => handle_for_statement(self, node, block, init, test, update, body),
 
             kind => todo!("compile node {:?}", kind),
         }
@@ -82,7 +88,7 @@ impl<'a> FlowGraph<'a> {
         scope: Rc<RefCell<Scope>>,
         nodes: &[Node<'a>],
         include_prologue_epilogue: bool,
-        next_basic_block_id: Option<BasicBlockId>
+        next_basic_block_id: Option<BasicBlockId>,
     ) -> BasicBlockId {
         let id = self.next_basic_block_id();
         let mut block = BasicBlock::new(
@@ -92,7 +98,7 @@ impl<'a> FlowGraph<'a> {
                 start: parent.start,
                 end: parent.end,
             },
-            next_basic_block_id
+            next_basic_block_id,
         );
 
         if include_prologue_epilogue {

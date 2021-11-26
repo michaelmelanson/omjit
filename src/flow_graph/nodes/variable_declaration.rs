@@ -1,15 +1,19 @@
 use almond::ast::{Node, NodeKind};
 
-use crate::{Id, Value, flow_graph::{BasicBlock, FlowInstruction, nodes::expression::evaluate_expression}};
-
+use crate::{
+    flow_graph::{
+        nodes::expression::evaluate_expression, BasicBlock, BasicBlockId, FlowInstruction,
+    },
+    Id, Value,
+};
 
 pub fn handle_variable_declarations<'a>(block: &mut BasicBlock, declarations: &Vec<Node<'a>>) {
     for declaration in declarations {
         match &declaration.kind {
-            NodeKind::VariableDeclarator { id, init } => {
-                let id = match &id.kind {
+            NodeKind::VariableDeclarator { id: node, init } => {
+                let id = match &node.kind {
                     NodeKind::Identifier { name } => Id::new(name),
-                    other => unimplemented!("identifier kind {:?}", other)
+                    other => unimplemented!("identifier kind {:?}", other),
                 };
 
                 {
@@ -23,10 +27,29 @@ pub fn handle_variable_declarations<'a>(block: &mut BasicBlock, declarations: &V
                 } else {
                     block.instructions.push(FlowInstruction::PushLiteralNull);
                 }
-                
-                block.instructions.push(FlowInstruction::Assign(id.clone()));
+
+                lookup_identifier(block, &id);
+                block.instructions.push(FlowInstruction::Assign);
             }
-            _ => unimplemented!("variable declaration node {:?}", declaration)
+            _ => unimplemented!("variable declaration node {:?}", declaration),
         }
+    }
+}
+
+fn lookup_identifier(block: &mut BasicBlock, id: &Id) {
+    let value = block.scope.borrow().lookup(id);
+
+    match value {
+        Some(value) => match value {
+            Value::StackVariable { offset } => {
+                block.push(FlowInstruction::PushStackVariable(offset))
+            }
+            Value::Function { id, params, body } => todo!("lookup function"),
+            Value::FunctionParameter(index) => {
+                block.push(FlowInstruction::PushFunctionParameter(index))
+            }
+            Value::SystemFunction(function) => todo!("lookup system function {:?}", function),
+        },
+        None => todo!("Identifier {:?} is not defined", id),
     }
 }
