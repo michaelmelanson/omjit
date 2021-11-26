@@ -39,7 +39,7 @@ impl<'a> FlowGraph<'a> {
                 let mut graph = FlowGraph::default();
 
                 let scope = Rc::new(RefCell::new(scope));
-                let root_block_id = graph.create_basic_block(node, scope, body, true, None);
+                let root_block_id = graph.create_basic_block(node, scope, body, true);
 
                 graph.root_block_id = Some(root_block_id);
                 graph
@@ -88,7 +88,7 @@ impl<'a> FlowGraph<'a> {
         scope: Rc<RefCell<Scope>>,
         nodes: &[Node<'a>],
         include_prologue_epilogue: bool,
-        next_basic_block_id: Option<BasicBlockId>,
+        
     ) -> BasicBlockId {
         let id = self.next_basic_block_id();
         let mut block = BasicBlock::new(
@@ -98,7 +98,7 @@ impl<'a> FlowGraph<'a> {
                 start: parent.start,
                 end: parent.end,
             },
-            next_basic_block_id,
+            //next_basic_block_id,
         );
 
         if include_prologue_epilogue {

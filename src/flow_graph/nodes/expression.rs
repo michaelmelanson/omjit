@@ -118,7 +118,7 @@ pub fn evaluate_expression(parent_block: &mut BasicBlock, node: &Node) {
                     parent_block.push(FlowInstruction::ApplyBinaryOperator(BinaryOperator::Plus));
                 }
 
-                other => unimplemented!("assignment expression with operator {:?}", operator),
+                other => unimplemented!("assignment expression with operator {:?}", other),
             }
 
             evaluate_expression(parent_block, left);

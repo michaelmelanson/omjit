@@ -15,13 +15,13 @@ pub fn handle_for_statement<'a>(
     parent_node: &Node<'a>,
     block: &mut BasicBlock,
     init: &Option<Node<'a>>,
-    test: &Option<Node<'a>>,
-    update: &Option<Node<'a>>,
+    _test: &Option<Node<'a>>,
+    _update: &Option<Node<'a>>,
     body: &Node<'a>,
 ) {
     if let Some(init) = init {
         match &init.kind {
-            NodeKind::VariableDeclaration { declarations, kind } => {
+            NodeKind::VariableDeclaration { declarations, kind: _ } => {
                 handle_variable_declarations(block, &declarations)
             }
             _ => unimplemented!("for-loop init node {:?}", init),
@@ -34,7 +34,7 @@ pub fn handle_for_statement<'a>(
             Rc::new(RefCell::new(Scope::new(Some(block.scope.clone())))),
             &body,
             false,
-            Some(block.id),
+            
         ),
         other => unimplemented!("for loop body node {:?}", other),
     };

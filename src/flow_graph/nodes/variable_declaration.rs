@@ -2,7 +2,7 @@ use almond::ast::{Node, NodeKind};
 
 use crate::{
     flow_graph::{
-        nodes::expression::evaluate_expression, BasicBlock, BasicBlockId, FlowInstruction,
+        nodes::expression::evaluate_expression, BasicBlock, FlowInstruction,
     },
     Id, Value,
 };
@@ -44,7 +44,7 @@ fn lookup_identifier(block: &mut BasicBlock, id: &Id) {
             Value::StackVariable { offset } => {
                 block.push(FlowInstruction::PushStackVariable(offset))
             }
-            Value::Function { id, params, body } => todo!("lookup function"),
+            Value::Function { id: _, params: _, body: _ } => todo!("lookup function"),
             Value::FunctionParameter(index) => {
                 block.push(FlowInstruction::PushFunctionParameter(index))
             }

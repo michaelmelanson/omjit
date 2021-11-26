@@ -4,15 +4,15 @@ use omjit::{Environment, FlowGraph, Scope};
 
 // static EMITTED: SyncLazy<Mutex<Vec<u64>>> = SyncLazy::new(|| Mutex::new(Vec::with_capacity(1)));
 
-extern "win64" fn emit_number_fn(number: u64) {
+// extern "win64" fn emit_number_fn(number: u64) {
     // EMITTED.lock().unwrap().push(number);
-}
+// }
 
 #[test]
 fn test_add() {
     let code = "function add(a, b) { return a + b; } add(2, 3);";
 
-    let mut scope = Scope::default();
+    let /*mut*/ scope = Scope::default();
     // scope.insert(
     //     Id("__emit".to_string()),
     //     Value::SystemFunction(SystemFunction::new(

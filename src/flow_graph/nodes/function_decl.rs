@@ -43,7 +43,7 @@ pub fn handle_function_decl<'a>(
             scope,
             body,
             true,
-            Some(parent_block.id),
+            
         );
 
         let value = Value::Function {

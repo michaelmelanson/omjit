@@ -1,7 +1,5 @@
 use almond::ast::BinaryOperator;
 
-use crate::Id;
-
 use super::{basic_block::BasicBlockId, value::SystemFunction};
 
 #[derive(Clone, Debug)]

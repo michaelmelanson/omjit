@@ -21,7 +21,6 @@ impl<'a> BasicBlock<'a> {
         id: BasicBlockId,
         scope: Rc<RefCell<Scope>>,
         span: SourceLocation<'a>,
-        next_basic_block_id: Option<BasicBlockId>,
     ) -> Self {
         Self {
             id,

@@ -249,7 +249,7 @@ pub fn codegen_basic_block(
                     CodegenStackEntry::StackVariable(offset) => {
                         (Some(Value::StackVariable { offset: *offset }), None)
                     }
-                    other => unimplemented!("assignment to left hand side {:?}", left_entry),
+                    other => unimplemented!("assignment to left hand side {:?}", other),
                 };
 
                 match left {
@@ -391,7 +391,7 @@ pub fn codegen_basic_block(
                 let target = environment.basic_block_fn(target_block_id, TypeInfo) as u64;
                 asm.jmp(target)?;
             }
-            TailInstruction::ConditionalJump(target_block_id) => todo!("conditional jump tail"),
+            TailInstruction::ConditionalJump(_target_block_id) => todo!("conditional jump tail"),
         }
     }
 
